@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       https://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop
+       https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <!-- 整合spring和service层 -->
+
+    <!-- 1.扫描Service包下的所有组件类 -->
+    <context:component-scan base-package="com.wq.service"/>
+
+    <!-- 2.获得所有的业务类,注入到spring -->
+    <bean id="bookServiceImpl" class="com.wq.service.BookServiceImpl">
+        <!--相关不同的xml配置文件 使得ref可以引用的2种方式
+            1.IDEA右上角configure application context 把想要关联的xml配置文件都放在统一个下
+            2.在applicationContext.xml import标签resource属性 把要关联的xml配置文件都导入
+        -->
+        <!-- spring-mybatis中扫描mapper包,这里是把注册在Mybatis.xml或者spring-mybatis里Mapper.xml变成接口使用
+             相当于UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+             这里引用的相当于等式左边这个mapper,虽然是个接口类型,但已经有具体的方法了
+
+             上面扫描了所有包,所以也可以直接在bookServiceImpl中使用注入的注解实现,
+             注入成功点击左边行号放大镜会到接口去 而不会到具体的接口实现类里面
+
+             注解实现注入就是
+             1.先在容器中context component-scan , 被注解@Component(共4-5中)标注的类会直接注入到容器中
+             2.在属性上使用@Autowired注解,会在容器中自动寻找符合这个属性类型的bean注入到这个属性里
+        -->
+        <property name="bookMapper" ref="bookMapper"/>
+    </bean>
+
+    <!-- 3.声明式事务 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 事务的初始化肯定要注入一个数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 4.结合AOP实现事务的织入
+         为什么是在服务类里实现织入呢?
+         事务是多个任务的组合,多个任务的组合就是在service层实现的
+    -->
+    <tx:advice id="txADVICE" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="add" propagation="REQUIRED"/>
+            <tx:method name="delete" propagation="REQUIRED"/>
+            <tx:method name="update" propagation="REQUIRED"/>
+            <tx:method name="query" read-only="true"/>
+            <tx:method name="*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+    <aop:config>
+        <aop:pointcut id="txPointCut" expression="execution(* com.wq.mapper.*.*(..))"/>
+        <aop:advisor advice-ref="txADVICE" pointcut-ref="txPointCut"/>
+    </aop:config>
+</beans>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <!-- 这个是spring配置文件 负责mybatis和spring的整合 -->
+
+    <!-- 1.关联数据库配置文件 -->
+    <bean id="propertyResourcesList" class="java.util.ArrayList">
+        <constructor-arg>
+            <list>
+                <value>classpath:database.properties</value>
+            </list>
+        </constructor-arg>
+    </bean>
+    <!-- 将上述注入的配置文件列表读取到容器中，交给Spring管理 -->
+    <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer" >
+        <property name="locations" ref="propertyResourcesList"/>
+    </bean>
+
+    <!-- 2.配置数据库连接池(可以在mybatis.xml里面做)
+         dbcp: 半自动化,不能自动连接
+         c3p0(ComboPooledDataSource): 自动化操作,自动化的配置文件,并且可以自动设置到对象中!
+         druid: 天然的日志可监控功能
+         hikari:
+    -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <!-- c3p0私有的设置最大连接池/是否自动提交等等操作 -->
+        <property name="maxPoolSize" value="30"/>
+        <property name="minPoolSize" value="10"/>
+        <property name="autoCommitOnClose" value="false"/>
+        <!-- 连接超过10s就算连接超时 -->
+        <property name="checkoutTimeout" value="10000"/>
+        <!--连接失败重试次数 -->
+        <property name="acquireRetryAttempts" value="2"/>
+    </bean>
+
+    <!-- 3.获得SqlSessionFactory 注入数据源-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 这里绑定mybatis.xml的一些设置 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+    </bean>
+
+    <!-- 4.获得SqlSession 之前学习的两种方式再回顾-->
+    <!--
+    (可以使用3的SqlSessionFactory直接注入,也可以继承SqlSessionDaoSupport实现相应的接口直接注入)
+    之前要
+    (创建实例类a私有SqlSession  在Spring中注入a,并给这个a注入SqlSessionTemplate)
+    1.如下利用SqlSessionFactory往Spring容器注入一个SqlSessionTemplate;
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg index="0" ref="sqlSessionFactory"/>
+    </bean>
+    2.编写接口实现类UserMapperImpl获取上述的SqlSessionTemplate调用Mapper.xml接口实现
+    public class UserMapperImpl implements UserMapper {
+        private SqlSessionTemplate sqlSession;
+        public void setSqlSession(SqlSessionTemplate sqlSession) {
+            this.sqlSession = sqlSession;
+        }
+        @Override
+        public List<User> selectUsers() {
+            UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+            List<User> userList = mapper.selectUsers();
+            return userList;
+        }
+    }
+    3.然后 将UserMapperImpl注入到applicationContext
+    将Spring容器中存在的SqlSessionTemplate注入给它的SqlSession属性 以供使用
+    或者(b继承SqlSessionDaoSupport 在Spring中注入b,并给b注入SqlSessionFactory)
+    1.继承SqlSessionDaoSupport类实现接口UserMapperImpl2
+    public class UserMapperImpl2 extends SqlSessionDaoSupport implements UserMapper {
+    2. 然后将UserMapperImpl2注入到applicationContext
+    将Spring容器中存在的SqlSessionFactory注入给它的父类属性
+    UserMapperImpl2里面就可以使用SqlSession做事情了
+    =====>最后都是从Spring容器中获得实现类,转成对应的接口 直接使用
+          [一个Mapper接口只能对应一个实现Mapper.xml]
+    =====>不用手动关闭,SqlSessionTemplate底层自动关闭
+    -->
+
+    <!-- 4.Spring有dao扫描包 动态实现了Dao接口注入到Spring容器中
+           这样就不需要去继承SqlSessionDaoSupport类 注入工厂获得SqlSession使用
+           或者去实现接口 注入SqlSessionTemplate 获得SqlSession使用了
+           业务类里的mapper接口可以直接使用maper.xml实现的方法
+     -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 这里的实现相当于上述第二种 [企业中多用] -->
+        <!-- 1.注入SqlSessionFactory(注入SqlSessionTemplate方式已经废弃) -->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <!-- 2.扫描mapper包,这里是把注册在Mybatis.xml或者spring-mybatis里Mapper.xml变成接口使用
+             相当于UserMapper mapper = sqlSession.getMapper(UserMapper.class);
+        -->
+        <property name="basePackage" value="com.wq.mapper"/>
+    </bean>
+
+</beans>

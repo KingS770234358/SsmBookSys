@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wq.mapper.BookMapper">
+
+    <insert id="addBook" parameterType="Books">
+        insert into ssmbooksys.books(bookName, bookCounts, detail)
+        values(#{bookName},#{bookCounts},#{detail});
+    </insert>
+
+    <delete id="deleteBooks">
+        delete from ssmbooksys.books where books.bookID = #{bookID};
+    </delete>
+
+    <update id="updateBook" parameterType="Books">
+        update ssmbooksys.books
+        set bookName=#{bookName},bookCounts=#{bookCounts},detail=#{detail}
+        where bookID=#{bookID};
+    </update>
+
+    <select id="queryBook" resultType="Books" parameterType="map">
+        select * from ssmbooksys.books
+        <where>
+            <if test="bookName!=null">
+                bookName like "%"#{bookName}"%"
+            </if>
+            <if test="bookCounts!=null">
+                or bookCounts=#{bookCounts}
+            </if>
+            <if test="detail!=null">
+                or detail like "%"#{detail}"%"
+            </if>
+        </where>
+    </select>
+
+    <select id="queryAllBooks" resultType="Books">
+        select * from ssmbooksys.books;
+    </select>
+    <select id="queryBooksByName" resultType="Books">
+        select * from ssmbooksys.books where bookName like "%"#{bookName}"%";
+    </select>
+
+</mapper>

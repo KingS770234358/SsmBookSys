@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <!-- mybatis配置文件 -->
+    <!-- 0.log4j -->
+    <settings>
+<!--        <setting name="logImpl" value="STDOUT_LOGGING"/>-->
+        <!-- LOG4J 不需要加LOGGING -->
+        <setting name="logImpl" value="LOG4J"/>
+    </settings>
+    <!-- 1.配置数据源====交给spring做 -->
+
+    <!-- 2.扫描包或者起别名(默认别名为类名 最好小写) 方便Mapper.xml -->
+    <typeAliases>
+        <package name="com.wq.pojo"/>
+    </typeAliases>
+
+    <!-- 3.注册Mapper.xml 也可以交给Spring -->
+    <mappers>
+        <mapper class="com.wq.mapper.BookMapper"/>
+    </mappers>
+
+</configuration>
